@@ -2,16 +2,17 @@ import PluginLoader
 import sys
 
 
-class ConsoleOutput(PluginLoader.Plugin):
-    """Outputs the data from the inverter logger to stdout"""
+class InfluxDBOutput(PluginLoader.Plugin):
+    """Outputs the data from the inverter logger to InfluxDB"""
 
     def process_message(self, msg):
-        """Output the information from the inverter to stdout.
+        """Output the information from the inverter to InfluxDB.
 
         Args:
             msg (InverterMsg.InverterMsg): Message to process
         """
 
+        print('hier moet je komen als je InfluxDB gebruikt als Output')
         sys.stdout.write('Inverter ID: {0}\n'.format(msg.id))
 
         sys.stdout.write('E Today : {0:>5}   Total: {1:<5}\n'.format(msg.e_today, (

@@ -8,6 +8,8 @@ import sys
 import logging
 import logging.config
 import sys
+from time import sleep
+
 if sys.version[:1] == '2':
     import ConfigParser as configparser
 else:
@@ -19,6 +21,7 @@ import errno
 from PluginLoader import Plugin
 import InverterMsg  # Import the Msg handler
 import InverterLib  # Import the library
+
 
 class InverterExport(object):
     """
@@ -41,8 +44,8 @@ class InverterExport(object):
         # add command line option -p / --plugins to override the output plugins used
         parser = optparse.OptionParser()
         parser.add_option('-p', '--plugins',
-                action="store", dest="plugins",
-                help="output plugins to use")
+                          action="store", dest="plugins",
+                          help="output plugins to use")
 
         self.options, self.args = parser.parse_args()
 
@@ -58,8 +61,8 @@ class InverterExport(object):
         Plugin.config = self.config
         Plugin.logger = self.logger
 
-        enabled_plugins = self.config.get('general', 'enabled_plugins')\
-                                     .split(',')
+        enabled_plugins = self.config.get('general', 'enabled_plugins') \
+            .split(',')
 
         # if -p / --plugin option giving at command line, override enabled plugins
         if self.options.plugins:
@@ -93,16 +96,16 @@ class InverterExport(object):
         while (True):
             # Wait for a connection
             self.logger.debug('waiting for a connection.')
-            conn,addr = logger_socket.accept()
-    
+            conn, addr = logger_socket.accept()
+
             self.logger.debug('connection from: {0}'.format(addr))
-    
+
             okflag = False
             while (not okflag):
                 try:
                     data = conn.recv(1024)
-                    #when disconnected
-                    if(len(data) == 0):
+                    # when disconnected
+                    if (len(data) == 0):
                         self.logger.debug('Socket disconnected')
                         okflag = True
                         continue
@@ -119,36 +122,38 @@ class InverterExport(object):
                         self.logger.error('Socket error. err = {0}'.format(err))
                         okflag = True
                         continue
-    
-                if(len(data) < 13):
+
+                if (len(data) < 13):
                     self.logger.error("Too short frame received: {0} bytes".format(len(data)))
                     okflag = True
                     continue
-    
-                #dump raw data to log
-                self.logger.debug('RAW received Packet (len={0}): '.format(len(data))+':'.join(hex(ord(chr(x)))[2:].zfill(2) for x in bytearray(data))+'  '+re.sub('[^\x20-\x7f]', '', ''.join(chr(x) for x in bytearray(data))))
-    
+
+                # dump raw data to log
+                self.logger.debug('RAW received Packet (len={0}): '.format(len(data)) + ':'.join(
+                    hex(ord(chr(x)))[2:].zfill(2) for x in bytearray(data)) + '  ' + re.sub('[^\x20-\x7f]', '', ''.join(
+                    chr(x) for x in bytearray(data))))
+
                 msg = InverterMsg.InverterMsg(data)
-    
-                #log DATA length
+
+                # log DATA length
                 self.logger.debug('DATA len={0}: '.format(msg.len))
-    
+
                 if (msg.msg)[:9] == 'DATA SEND':
                     self.logger.debug("Exit Status: {0}".format(msg.msg))
                     okflag = True
                     continue
-    
+
                 if (msg.msg)[:11] == 'NO INVERTER':
                     self.logger.debug("Inverter is in sleep mode: {0} received".format(msg.msg))
                     okflag = True
                     continue
-    
+
                 self.logger.info("Inverter ID: {0}".format(msg.id))
                 if (msg.len > 140):
                     self.logger.info("Inverter main firmware version: {0}".format(msg.main_fwver))
                     self.logger.info("Inverter slave firmware version: {0}".format(msg.slave_fwver))
                 self.logger.info("RUN State: {0}".format(msg.run_state))
-    
+
                 for plugin in Plugin.plugins:
                     self.logger.debug('Run plugin' + plugin.__class__.__name__)
                     plugin.process_message(msg)
@@ -177,7 +182,7 @@ class InverterExport(object):
                 'file': {
                     'class': 'logging.FileHandler',
                     'filename': InverterLib.expand_path(config.get('log',
-                                                              'filename')),
+                                                                   'filename')),
                     'formatter': 'f'},
             },
             'loggers': {
@@ -193,6 +198,7 @@ class InverterExport(object):
     def override_config(self, section, option, value):
         """Override config settings"""
         self.config.set(section, option, value)
+
 
 if __name__ == "__main__":
     inverter_exporter = InverterExport('config.cfg')

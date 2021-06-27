@@ -8,6 +8,8 @@ import sys
 import logging
 import logging.config
 import sys
+import time
+
 if sys.version[:1] == '2':
     import ConfigParser as configparser
 else:
@@ -18,6 +20,7 @@ import re
 from PluginLoader import Plugin
 import InverterMsg  # Import the Msg handler
 import InverterLib  # Import the library
+
 
 class InverterExport(object):
     """
@@ -40,8 +43,8 @@ class InverterExport(object):
         # add command line option -p / --plugins to override the output plugins used
         parser = optparse.OptionParser()
         parser.add_option('-p', '--plugins',
-                action="store", dest="plugins",
-                help="output plugins to use")
+                          action="store", dest="plugins",
+                          help="output plugins to use")
 
         self.options, self.args = parser.parse_args()
 
@@ -57,8 +60,8 @@ class InverterExport(object):
         Plugin.config = self.config
         Plugin.logger = self.logger
 
-        enabled_plugins = self.config.get('general', 'enabled_plugins')\
-                                     .split(',')
+        enabled_plugins = self.config.get('general', 'enabled_plugins') \
+            .split(',')
 
         # if -p / --plugin option giving at command line, override enabled plugins
         if self.options.plugins:
@@ -74,7 +77,7 @@ class InverterExport(object):
             self.logger.error('no gateways defined in configuration file, exiting.')
             return []
 
-        if(self.config.get('logger', 'gateways') == 'auto'):
+        if (self.config.get('logger', 'gateways') == 'auto'):
             # get loggers
             gateway_list = InverterLib.getLoggers().split(',')
             if (len(gateway_list) < 2):
@@ -84,12 +87,13 @@ class InverterExport(object):
         else:
             gateway_list = self.config.get('logger', 'gateways').split(',')
             if (len(gateway_list) % 2):
-                self.logger.error('incorrect number of values in configuration file for gateways: {0}, exiting.'.format(gateway_list))
+                self.logger.error(
+                    'incorrect number of values in configuration file for gateways: {0}, exiting.'.format(gateway_list))
                 return []
 
         for i in range(0, len(gateway_list), 2):
             ip = gateway_list[i]
-            sn = gateway_list[i+1]
+            sn = gateway_list[i + 1]
 
             self.logger.info('Connecting to logger with IP: {0} and SN {1}'.format(ip, sn))
 
@@ -98,27 +102,30 @@ class InverterExport(object):
 
             next = False
             for res in socket.getaddrinfo(ip, port, socket.AF_INET,
-                                           socket.SOCK_STREAM):
-                 family, socktype, proto, canonname, sockadress = res
-                 try:
-                     self.logger.info('connecting to {0} port {1}'.format(ip, port))
-                     logger_socket = socket.socket(family, socktype, proto)
-                     logger_socket.settimeout(timeout)
-                     logger_socket.connect(sockadress)
-                 except socket.error as msg:
-                     self.logger.error('Could not open socket')
-                     self.logger.error(msg)
-                     self.logger.error('Error connecting to logger with IP: {0} and SN {1}, trying next logger.'.format(ip, sn))
-                     next = True
-                     break
+                                          socket.SOCK_STREAM):
+                family, socktype, proto, canonname, sockadress = res
+                try:
+                    self.logger.info('connecting to {0} port {1}'.format(ip, port))
+                    logger_socket = socket.socket(family, socktype, proto)
+                    logger_socket.settimeout(timeout)
+                    logger_socket.connect(sockadress)
+                except socket.error as msg:
+                    self.logger.error('Could not open socket')
+                    self.logger.error(msg)
+                    self.logger.error(
+                        'Error connecting to logger with IP: {0} and SN {1}, trying next logger.'.format(ip, sn))
+                    next = True
+                    break
             if (next):
                 continue
 
             data = InverterLib.createV4RequestFrame(int(sn))
             logger_socket.sendall(data)
 
-            #dump raw data to log
-            self.logger.debug('RAW sent Packet (len={0}): '.format(len(data))+':'.join(hex(ord(chr(x)))[2:].zfill(2) for x in bytearray(data))+'  '+re.sub('[^\x20-\x7f]', '', ''.join(chr(x) for x in bytearray(data))))
+            # dump raw data to log
+            self.logger.debug('RAW sent Packet (len={0}): '.format(len(data)) + ':'.join(
+                hex(ord(chr(x)))[2:].zfill(2) for x in bytearray(data)) + '  ' + re.sub('[^\x20-\x7f]', '', ''.join(
+                chr(x) for x in bytearray(data))))
 
             okflag = False
             while (not okflag):
@@ -126,16 +133,19 @@ class InverterExport(object):
                 try:
                     data = logger_socket.recv(1024)
                 except socket.timeout as e:
-                    self.logger.error('Timeout connecting to logger with IP: {0} and SN {1}, trying next logger.'.format(ip, sn))
+                    self.logger.error(
+                        'Timeout connecting to logger with IP: {0} and SN {1}, trying next logger.'.format(ip, sn))
                     okflag = True
                     continue
 
-                #dump raw data to log
-                self.logger.debug('RAW received Packet (len={0}): '.format(len(data))+':'.join(hex(ord(chr(x)))[2:].zfill(2) for x in bytearray(data))+'  '+re.sub('[^\x20-\x7f]', '', ''.join(chr(x) for x in bytearray(data))))
+                # dump raw data to log
+                self.logger.debug('RAW received Packet (len={0}): '.format(len(data)) + ':'.join(
+                    hex(ord(chr(x)))[2:].zfill(2) for x in bytearray(data)) + '  ' + re.sub('[^\x20-\x7f]', '', ''.join(
+                    chr(x) for x in bytearray(data))))
 
                 msg = InverterMsg.InverterMsg(data)
 
-                #log DATA length
+                # log DATA length
                 self.logger.debug('DATA len={0}: '.format(msg.len))
 
                 if (msg.msg)[:9] == 'DATA SEND':
@@ -184,7 +194,7 @@ class InverterExport(object):
                 'file': {
                     'class': 'logging.FileHandler',
                     'filename': InverterLib.expand_path(config.get('log',
-                                                              'filename')),
+                                                                   'filename')),
                     'formatter': 'f'},
             },
             'loggers': {
@@ -201,6 +211,9 @@ class InverterExport(object):
         """Override config settings"""
         self.config.set(section, option, value)
 
+
 if __name__ == "__main__":
     inverter_exporter = InverterExport('config.cfg')
-    inverter_exporter.run()
+    while True:
+        inverter_exporter.run()
+        time.sleep(5)

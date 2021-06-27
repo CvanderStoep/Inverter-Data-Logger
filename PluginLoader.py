@@ -2,6 +2,7 @@
 # Needs six module, run: pip install six
 from six import add_metaclass
 
+
 class PluginMount(type):
     """
     A plugin mount point derived from:
@@ -29,6 +30,7 @@ class PluginMount(type):
 
         # save the plugin reference
         cls.plugins.append(instance)
+
 
 @add_metaclass(PluginMount)
 class Plugin(object):
