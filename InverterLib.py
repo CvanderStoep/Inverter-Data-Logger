@@ -3,6 +3,7 @@ import struct
 import os
 import binascii
 import sys
+from importlib import reload
 
 if sys.version[0] == '2':
     reload(sys)

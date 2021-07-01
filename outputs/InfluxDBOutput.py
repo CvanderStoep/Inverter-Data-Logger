@@ -1,5 +1,16 @@
+from datetime import datetime
+
 import PluginLoader
 import sys
+
+from influxdb import InfluxDBClient
+
+# TODO move below to config.cfg file?
+computer_address = 'localhost'  # InfluxDB installed on this PC
+computer_port = 8086  # port number of the DB
+client = InfluxDBClient(host=computer_address, port=computer_port)
+city = "Thuis"
+database_name = "localdata"
 
 
 class InfluxDBOutput(PluginLoader.Plugin):
@@ -11,12 +22,35 @@ class InfluxDBOutput(PluginLoader.Plugin):
         Args:
             msg (InverterMsg.InverterMsg): Message to process
         """
+        data_point = [{'measurement': 'solarpanel',
+                       'tags': {'location': city},
+                       'fields': {'power': msg.p_ac(1)}
+                       }] + \
+                      [{'measurement': 'solarpanel',
+                        'tags': {'location': city},
+                        'fields': {'Temp': msg.temp}
+                        }] + \
+                      [{'measurement': 'solarpanel',
+                        'tags': {'location': city},
+                        'fields': {'power today': msg.e_today}
+                        }] + \
+                      [{'measurement': 'solarpanel',
+                        'tags': {'location': city},
+                        'fields': {'power total': ((((msg.e_today * 10) - (int(msg.e_today * 10))) / 10) + msg.e_total)}
+                        }]
+
+        print(datetime.now(), data_point)
+        client.write_points(data_point, database=database_name)
+        # , retention_policy=retention_policy_default)
+
+        print('day, total=',msg.e_today, msg.e_total )
+        print('int-diff= ', (((msg.e_today * 10) - (int(msg.e_today * 10))) / 10))
 
         print('hier moet je komen als je InfluxDB gebruikt als Output')
         sys.stdout.write('Inverter ID: {0}\n'.format(msg.id))
 
         sys.stdout.write('E Today : {0:>5}   Total: {1:<5}\n'.format(msg.e_today, (
-                    (((msg.e_today * 10) - (int(msg.e_today * 10))) / 10) + msg.e_total)))
+                (((msg.e_today * 10) - (int(msg.e_today * 10))) / 10) + msg.e_total)))
         sys.stdout.write('H Total : {0:>5}   Temp : {1:<5}\n'.format(msg.h_total, msg.temp))
         sys.stdout.write('errorMsg: {0:>5}\n'.format(msg.errorMsg))
 

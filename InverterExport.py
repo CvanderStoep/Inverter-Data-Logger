@@ -214,6 +214,7 @@ class InverterExport(object):
 
 if __name__ == "__main__":
     inverter_exporter = InverterExport('config.cfg')
+
     while True:
         inverter_exporter.run()
-        time.sleep(5)
+        time.sleep(60)
